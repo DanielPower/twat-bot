@@ -1296,6 +1296,7 @@ name = "twatbot"
 version = "0.1.0"
 dependencies = [
  "dotenv",
+ "rand",
  "regex",
  "serenity",
  "tokio",
