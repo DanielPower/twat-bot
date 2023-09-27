@@ -19,7 +19,7 @@ impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
         let re = Regex::new(r"\s?(https:|http:)//(www\.)?(twitter|x)\.com(/[^\s]*)?").unwrap();
         println!("Received message: {}", msg.content);
-        if re.is_match(&msg.content) && random::<f32>() > 0.1 {
+        if re.is_match(&msg.content) && random::<f32>() < 0.05 {
             msg.reply_ping(&ctx.http, "Fuck Elon").await.ok();
         }
     }
