@@ -5,22 +5,39 @@ use serenity::model::prelude::Message;
 use std::env;
 
 use serenity::async_trait;
-use serenity::framework::standard::macros::group;
-use serenity::framework::standard::StandardFramework;
 use serenity::prelude::*;
 
-#[group]
-struct General;
-
-struct Handler;
+struct Bot {
+    db: sqlx::SqlitePool,
+}
 
 #[async_trait]
-impl EventHandler for Handler {
+impl EventHandler for Bot {
     async fn message(&self, ctx: Context, msg: Message) {
         let re = Regex::new(r"\s?(https:|http:)//(www\.)?(twitter|x)\.com(/[^\s]*)?").unwrap();
         println!("Received message: {}", msg.content);
-        if re.is_match(&msg.content) && random::<f32>() < 0.05 {
-            msg.reply_ping(&ctx.http, "Fuck Elon").await.ok();
+        if re.is_match(&msg.content) {
+            let timestamp = msg.timestamp.to_string();
+            let user_id = msg.author.id.to_string();
+            let url = msg.link();
+            sqlx::query!(
+                "
+                INSERT INTO twat (date, user_id, url)
+                VALUES (?1, ?2, ?3)
+                ",
+                timestamp,
+                user_id,
+                url,
+            )
+            .execute(&self.db)
+            .await
+            .unwrap();
+            if random::<f32>() < 0.05 {
+                msg.reply_ping(&ctx.http, "Fuck Elon").await.ok();
+            }
+        }
+        if msg.content == "twats!" {
+            leaderboard(self, &ctx, &msg).await.unwrap();
         }
     }
 }
@@ -28,14 +45,17 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-    let framework = StandardFramework::new().group(&GENERAL_GROUP);
+    let db = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(sqlx::sqlite::SqliteConnectOptions::new().filename("data/db.sqlite3"))
+        .await
+        .expect("Couldn't connect to database");
 
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("token");
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
     let mut client = Client::builder(token, intents)
-        .event_handler(Handler)
-        .framework(framework)
+        .event_handler(Bot { db })
         .await
         .expect("Error creating client");
 
@@ -43,4 +63,29 @@ async fn main() {
     if let Err(why) = client.start().await {
         println!("An error occurred while running the client: {:?}", why);
     }
+}
+
+async fn leaderboard(bot: &Bot, ctx: &Context, msg: &Message) -> serenity::Result<()> {
+    let rows = sqlx::query!(
+        "SELECT user_id, COUNT(user_id) AS frequency
+        FROM twat
+        GROUP BY user_id
+        ORDER BY frequency DESC
+        LIMIT 5
+        ",
+    )
+    .fetch_all(&bot.db)
+    .await
+    .unwrap();
+    let mut message = "".to_string();
+    let guild = msg.guild(&ctx).unwrap();
+    for record in rows {
+        let user_id = record.user_id.parse::<u64>().unwrap();
+        let user = guild.member(&ctx, user_id).await.unwrap();
+        let nickname = user.mention();
+        message.push_str(&format!("{}: {}\n", nickname, record.frequency.to_string()));
+    }
+    print!("{}", message);
+    msg.reply(ctx, message).await.ok();
+    Ok(())
 }
