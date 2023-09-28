@@ -15,7 +15,6 @@ struct Bot {
 impl EventHandler for Bot {
     async fn message(&self, ctx: Context, msg: Message) {
         let re = Regex::new(r"\s?(https:|http:)//(www\.)?(twitter|x)\.com(/[^\s]*)?").unwrap();
-        println!("Received message: {}", msg.content);
         if re.is_match(&msg.content) {
             let timestamp = msg.timestamp.to_string();
             let user_id = msg.author.id.to_string();
@@ -45,16 +44,18 @@ impl EventHandler for Bot {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("Missing environment variable DATABASE_URL");
+    let discord_token =
+        env::var("DISCORD_TOKEN").expect("Missing environment variable DISCORD_TOKEN");
     let db = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
-        .connect_with(sqlx::sqlite::SqliteConnectOptions::new())
+        .connect(&database_url)
         .await
         .expect("Couldn't connect to database");
 
     // Login with a bot token from the environment
-    let token = env::var("DISCORD_TOKEN").expect("token");
     let intents = GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT;
-    let mut client = Client::builder(token, intents)
+    let mut client = Client::builder(discord_token, intents)
         .event_handler(Bot { db })
         .await
         .expect("Error creating client");
@@ -85,7 +86,6 @@ async fn leaderboard(bot: &Bot, ctx: &Context, msg: &Message) -> serenity::Resul
         let nickname = user.mention();
         message.push_str(&format!("{}: {}\n", nickname, record.frequency.to_string()));
     }
-    print!("{}", message);
     msg.reply(ctx, message).await.ok();
     Ok(())
 }
