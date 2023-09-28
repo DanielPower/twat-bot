@@ -1,5 +1,4 @@
 use dotenv::dotenv;
-use rand::random;
 use regex::Regex;
 use serenity::model::prelude::Message;
 use std::env;
@@ -14,26 +13,39 @@ struct Bot {
 #[async_trait]
 impl EventHandler for Bot {
     async fn message(&self, ctx: Context, msg: Message) {
-        let re = Regex::new(r"\s?(https:|http:)//(www\.)?(twitter|x)\.com(/[^\s]*)?").unwrap();
-        if re.is_match(&msg.content) {
-            let timestamp = msg.timestamp.to_string();
-            let user_id = msg.author.id.to_string();
-            let url = msg.link();
-            sqlx::query!(
-                "
+        let re =
+            Regex::new(r"\s?(?:https:|http:)//(?:www\.)?(?:twitter|x)\.com(/[^\s]*)?").unwrap();
+        match re.captures(&msg.content) {
+            Some(foo) => {
+                let timestamp = msg.timestamp.to_string();
+                let user_id = msg.author.id.to_string();
+                let url = msg.link();
+                sqlx::query!(
+                    "
                 INSERT INTO twat (date, user_id, url)
                 VALUES (?1, ?2, ?3)
                 ",
-                timestamp,
-                user_id,
-                url,
-            )
-            .execute(&self.db)
-            .await
-            .unwrap();
-            if random::<f32>() < 0.05 {
-                msg.reply_ping(&ctx.http, "Fuck Elon").await.ok();
+                    timestamp,
+                    user_id,
+                    url,
+                )
+                .execute(&self.db)
+                .await
+                .unwrap();
+                println!("{}", foo.get(1).unwrap().as_str());
+                match foo.get(1) {
+                    Some(slug) => {
+                        msg.reply_ping(
+                            &ctx.http,
+                            format!("Here's a better link: https://nitter.net{}", slug.as_str()),
+                        )
+                        .await
+                        .ok();
+                    }
+                    None => {}
+                }
             }
+            None => {}
         }
         if msg.content == "twats!" {
             leaderboard(self, &ctx, &msg).await.unwrap();
