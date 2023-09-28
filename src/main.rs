@@ -47,7 +47,7 @@ async fn main() {
     dotenv().ok();
     let db = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
-        .connect_with(sqlx::sqlite::SqliteConnectOptions::new().filename("data/db.sqlite3"))
+        .connect_with(sqlx::sqlite::SqliteConnectOptions::new())
         .await
         .expect("Couldn't connect to database");
 
