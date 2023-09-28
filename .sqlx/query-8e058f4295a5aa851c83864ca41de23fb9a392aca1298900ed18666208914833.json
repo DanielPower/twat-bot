@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT user_id, COUNT(user_id) AS frequency\n        FROM twat\n        GROUP BY user_id\n        ORDER BY frequency DESC\n        LIMIT 5\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 1,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8e058f4295a5aa851c83864ca41de23fb9a392aca1298900ed18666208914833"
+}
