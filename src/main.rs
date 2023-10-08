@@ -35,12 +35,11 @@ impl EventHandler for Bot {
                 println!("{}", foo.get(1).unwrap().as_str());
                 match foo.get(1) {
                     Some(slug) => {
-                        msg.reply_ping(
-                            &ctx.http,
-                            format!("Here's a better link: https://nitter.net{}", slug.as_str()),
-                        )
-                        .await
-                        .ok();
+                        let channel = msg.channel(&ctx.http).await.unwrap().guild().unwrap();
+                        channel
+                            .say(&ctx.http, format!("https://nitter.net{}", slug.as_str()))
+                            .await
+                            .ok();
                     }
                     None => {}
                 }
