@@ -37,7 +37,7 @@ impl EventHandler for Bot {
                     Some(slug) => {
                         let channel = msg.channel(&ctx.http).await.unwrap().guild().unwrap();
                         channel
-                            .say(&ctx.http, format!("https://nitter.net{}", slug.as_str()))
+                            .say(&ctx.http, format!("https://fxtwitter.com{}", slug.as_str()))
                             .await
                             .ok();
                     }
