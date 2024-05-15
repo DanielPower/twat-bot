@@ -90,10 +90,8 @@ async fn leaderboard(bot: &Bot, ctx: &Context, msg: &Message) -> serenity::Resul
     .await
     .unwrap();
     let mut message = "".to_string();
-    let guild = msg.guild(&ctx).unwrap();
+    let user = msg.member(&ctx.http).await.unwrap();
     for record in rows {
-        let user_id = record.user_id.parse::<u64>().unwrap();
-        let user = guild.member(&ctx, user_id).await.unwrap();
         let nickname = user.mention();
         message.push_str(&format!("{}: {}\n", nickname, record.frequency.to_string()));
     }
