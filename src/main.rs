@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use regex::Regex;
+use serenity::all::EditMessage;
 use serenity::model::prelude::Message;
 use std::env;
 
@@ -12,7 +13,7 @@ struct Bot {
 
 #[async_trait]
 impl EventHandler for Bot {
-    async fn message(&self, ctx: Context, msg: Message) {
+    async fn message(&self, ctx: Context, mut msg: Message) {
         let re = Regex::new(r"\s?(?:https:|http:)//(?:www\.)?(?:twitter|x)\.com(/[^\s]*)?")
             .unwrap_or_else(|e| panic!("Failed to compile regex: {}", e));
         match re.captures(&msg.content) {
@@ -51,6 +52,10 @@ impl EventHandler for Bot {
                             .say(&ctx.http, format!("https://fxtwitter.com{}", slug.as_str()))
                             .await
                             .ok();
+                        let _ = &msg
+                            .edit(&ctx, EditMessage::new().suppress_embeds(true))
+                            .await
+                            .unwrap_or_else(|e| panic!("Failed to edit message: {}", e));
                     }
                     None => {}
                 }
