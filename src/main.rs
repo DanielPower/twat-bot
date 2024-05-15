@@ -13,10 +13,10 @@ struct Bot {
 #[async_trait]
 impl EventHandler for Bot {
     async fn message(&self, ctx: Context, msg: Message) {
-        let re =
-            Regex::new(r"\s?(?:https:|http:)//(?:www\.)?(?:twitter|x)\.com(/[^\s]*)?").unwrap();
+        let re = Regex::new(r"\s?(?:https:|http:)//(?:www\.)?(?:twitter|x)\.com(/[^\s]*)?")
+            .unwrap_or_else(|e| panic!("Failed to compile regex: {}", e));
         match re.captures(&msg.content) {
-            Some(foo) => {
+            Some(captures) => {
                 let timestamp = msg.timestamp.to_string();
                 let user_id = msg.author.id.to_string();
                 let url = msg.link();
@@ -31,11 +31,22 @@ impl EventHandler for Bot {
                 )
                 .execute(&self.db)
                 .await
-                .unwrap();
-                println!("{}", foo.get(1).unwrap().as_str());
-                match foo.get(1) {
+                .unwrap_or_else(|e| panic!("Failed to update twat leaderboard: {}", e));
+                println!(
+                    "{}",
+                    captures
+                        .get(1)
+                        .unwrap_or_else(|| panic!("No capture group found"))
+                        .as_str()
+                );
+                match captures.get(1) {
                     Some(slug) => {
-                        let channel = msg.channel(&ctx.http).await.unwrap().guild().unwrap();
+                        let channel = msg
+                            .channel(&ctx.http)
+                            .await
+                            .unwrap_or_else(|e| panic!("Failed to get channel: {}", e))
+                            .guild()
+                            .unwrap_or_else(|| panic!("Failed to get guild"));
                         channel
                             .say(&ctx.http, format!("https://fxtwitter.com{}", slug.as_str()))
                             .await
@@ -47,7 +58,9 @@ impl EventHandler for Bot {
             None => {}
         }
         if msg.content == "twats!" {
-            leaderboard(self, &ctx, &msg).await.unwrap();
+            leaderboard(self, &ctx, &msg)
+                .await
+                .unwrap_or_else(|e| panic!("Failed to display leaderboard: {}", e));
         }
     }
 }
@@ -88,9 +101,13 @@ async fn leaderboard(bot: &Bot, ctx: &Context, msg: &Message) -> serenity::Resul
     )
     .fetch_all(&bot.db)
     .await
-    .unwrap();
+    .unwrap_or_else(|e| {
+        panic!("Failed to select users for query: {}", e);
+    });
     let mut message = "".to_string();
-    let user = msg.member(&ctx.http).await.unwrap();
+    let user = msg.member(&ctx.http).await.unwrap_or_else(|e| {
+        panic!("Failed to get user: {}", e);
+    });
     for record in rows {
         let nickname = user.mention();
         message.push_str(&format!("{}: {}\n", nickname, record.frequency.to_string()));
