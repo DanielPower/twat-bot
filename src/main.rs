@@ -24,7 +24,7 @@ impl EventHandler for Bot {
                         .guild()
                         .unwrap_or_else(|| panic!("Failed to get guild"));
                     channel
-                        .say(&ctx.http, format!("https://fxtwitter.com{}", slug.as_str()))
+                        .say(&ctx.http, format!("https://girlcockx.com{}", slug.as_str()))
                         .await
                         .ok();
                     let _ = &msg
